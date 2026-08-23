@@ -32,12 +32,12 @@ jobs:
             await expect(page.getByRole('button', { name: /現在地から/ })).toBeVisible();
           });
 
-          test('catch manual mode button reacts', async ({ page }) => {
+          test('catch fish selection reacts', async ({ page }) => {
             await page.goto(BASE + '/catch.html', { waitUntil: 'networkidle' });
-            const mode = page.getByRole('button', { name: '手動で調整する' });
-            await expect(mode).toBeVisible();
-            await mode.click();
-            await expect(page.getByRole('button', { name: '自動入力を使う' })).toBeVisible();
+            const fish = page.locator('button[data-fish="サワラ"]');
+            await expect(fish).toBeVisible();
+            await fish.click();
+            await expect(page.locator('button[data-fish="サワラ"]')).toHaveClass(/on/);
           });
 
           test('tackle three modes switch', async ({ page }) => {
