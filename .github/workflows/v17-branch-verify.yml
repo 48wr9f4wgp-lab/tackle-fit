@@ -1,0 +1,108 @@
+name: V17 Branch Verify
+
+on:
+  push:
+    branches: [fix/ux-required-fish-v17]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct and verify payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, gzip, hashlib, pathlib, json, re
+          p=pathlib.Path('.')
+          catch=''.join((p/f'catch-p{i}.txt').read_text() for i in range(4))
+          tackle=''.join((p/f'tackle-r{i:02d}.txt').read_text() for i in range(14))
+          c=gzip.decompress(base64.b64decode(catch)).decode('utf-8')
+          t=gzip.decompress(base64.b64decode(tackle)).decode('utf-8')
+          assert len(c.encode()) == 69791, len(c.encode())
+          assert hashlib.sha256(c.encode()).hexdigest() == '3f986264896ca72e490791a637590954fc8970b80c955bba13c715afe408c858'
+          assert len(t.encode()) == 154105, len(t.encode())
+          assert hashlib.sha256(t.encode()).hexdigest() == 'deb914a3757626b805210d7c01659648208fb4e62335997762e0b18a262f4837'
+          catch_groups=json.loads(re.search(r'const CATCH_UI_GROUPS=(\{.*?\});', c).group(1))
+          tackle_groups=json.loads(re.search(r'const FISH_GROUPS=(\{.*?\});', t).group(1))
+          assert sum(map(len,catch_groups.values())) == 115
+          assert sum(map(len,tackle_groups.values())) == 115
+          for marker in ['catch-fish-search', '近似ランキング', 'キハダマグロ']:
+              assert marker in c, marker
+          for marker in ['判定までの入力', 'おすすめ作成までの入力', '手持ち最適化までの入力', 'fish-search', '組み合わせを確認']:
+              assert marker in t, marker
+          print('PAYLOAD_OK', len(c.encode()), len(t.encode()), 'fish=115')
+          PY
+
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run branch browser E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8000 >/tmp/tackle-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          cat > v17.spec.js <<'EOF'
+          const { test, expect } = require('@playwright/test');
+          const BASE='http://127.0.0.1:8000';
+
+          async function firstProduct(page, cat) {
+            const select=page.locator(`select[data-product="${cat}"]`);
+            const value=await select.locator('option:not([value=""])').first().getAttribute('value');
+            if (!value) throw new Error(`no product option for ${cat}`);
+            await select.selectOption(value);
+          }
+
+          test('tackle clearly shows required progress and reaches 6/6', async ({ page }) => {
+            await page.goto(BASE+'/tackle.html', {waitUntil:'networkidle'});
+            await expect(page.getByText('0/6 入力済み')).toBeVisible();
+            const result=page.locator('#show-result');
+            await expect(result).toBeDisabled();
+            await page.locator('#fish-search').fill('チヌ');
+            await expect(page.locator('button[data-multi="targets"][data-value="クロダイ"]').first()).toBeVisible();
+            await page.locator('#fish-search').fill('');
+            await page.locator('button[data-multi="targets"][data-value="ブリ"]').first().click();
+            await page.locator('button[data-multi="methods"][data-value="ショアジギング"]').click();
+            await page.locator('button[data-multi="lures"][data-value="メタルジグ"]').click();
+            await firstProduct(page,'rod');
+            await firstProduct(page,'main_line');
+            await firstProduct(page,'reel');
+            await expect(page.getByText('6/6 入力済み')).toBeVisible();
+            await expect(page.locator('#show-result')).toBeEnabled();
+            await page.locator('#show-result').click();
+            await expect(page.locator('#result-card')).toBeVisible();
+          });
+
+          test('each mode tells the user how much input it needs', async ({ page }) => {
+            await page.goto(BASE+'/tackle.html', {waitUntil:'networkidle'});
+            await page.evaluate(()=>localStorage.clear());
+            await page.reload({waitUntil:'networkidle'});
+            await page.getByRole('button',{name:'おすすめ構成を作る'}).click();
+            await expect(page.getByText('0/2 入力済み')).toBeVisible();
+            await expect(page.getByText('魚と釣り方を選ぶとおすすめを作れます')).toBeVisible();
+            await page.getByRole('button',{name:'持っている釣具'}).click();
+            await expect(page.getByText('0/3 入力済み')).toBeVisible();
+            await expect(page.getByText('魚・釣り方・仕掛けを選ぶと手持ちを最適化できます')).toBeVisible();
+          });
+
+          test('catch page can search and select newly added species', async ({ page }) => {
+            await page.goto(BASE+'/catch.html', {waitUntil:'networkidle'});
+            await page.locator('#catch-fish-search').fill('キハダマグロ');
+            const fish=page.locator('button[data-fish="キハダマグロ"]').first();
+            await expect(fish).toBeVisible();
+            await fish.click();
+            await expect(fish).toHaveClass(/on/);
+          });
+          EOF
+          npx playwright test v17.spec.js --reporter=line --workers=1
