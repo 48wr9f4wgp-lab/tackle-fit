@@ -1,0 +1,34 @@
+name: V17 Payload Debug
+
+on:
+  push:
+    branches: [fix/ux-required-fish-v17]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  hashes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print payload hashes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib
+          expected={
+            'tackle-q0.txt':(15000,'713242388f4516f89c9f08172eca3f08385b8d5783f8df7eea2839a5f6fd2985'),
+            'tackle-q1.txt':(15000,'7ee8d6e456b879f3c194ecfb64befed152b6b00ac124324b4559dac337177ce3'),
+            'tackle-q2a.txt':(7000,'8bd030c25f66430de8fffe21fdf5124734063992a7c204fa1963beacb8d6e891'),
+            'tackle-q2b.txt':(7000,'09e8b60cb7b03dc3a85663f590d54c2d64a7d92602d5ba49bac079a044f4f04f'),
+            'tackle-q2c.txt':(5636,'991d92ea65385f8f5290163cf171895315241439372612daf1bb369c75be5a59'),
+          }
+          bad=[]
+          for f,(n,h) in expected.items():
+              b=pathlib.Path(f).read_bytes(); got=hashlib.sha256(b).hexdigest()
+              print(f,'len=',len(b),'sha256=',got,'expected=',n,h)
+              if len(b)!=n or got!=h: bad.append(f)
+          if bad: raise SystemExit('MISMATCH: '+', '.join(bad))
+          print('ALL_CHUNKS_MATCH')
+          PY
