@@ -1,8 +1,6 @@
 name: Static Trial Integrity
 
 on:
-  push:
-    branches: [dev/v2-nextjs]
   pull_request:
     branches: [main]
 
@@ -18,22 +16,28 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import base64, gzip
+          import base64, gzip, hashlib, json, re
 
           def rebuild(parts):
               payload = ''.join(Path(p).read_text(encoding='utf-8').strip() for p in parts)
               return gzip.decompress(base64.b64decode(payload)).decode('utf-8')
 
-          catch = rebuild(['catch-p0.txt','catch-p1.txt','catch-p2.txt','catch-p3.txt'])
-          tackle = rebuild(['tackle-q0.txt','tackle-q1.txt','tackle-q2a.txt','tackle-q2b.txt','tackle-q2c.txt'])
+          catch = rebuild([f'catch-p{i}.txt' for i in range(4)])
+          tackle = rebuild([f'tackle-r{i:02d}.txt' for i in range(14)])
 
-          assert len(catch) > 50000, len(catch)
-          assert len(tackle) > 120000, len(tackle)
+          assert len(catch.encode()) == 69791
+          assert hashlib.sha256(catch.encode()).hexdigest() == '3f986264896ca72e490791a637590954fc8970b80c955bba13c715afe408c858'
+          assert len(tackle.encode()) == 154105
+          assert hashlib.sha256(tackle.encode()).hexdigest() == 'deb914a3757626b805210d7c01659648208fb4e62335997762e0b18a262f4837'
 
-          for marker in ['TACKLE FIT', '釣況']:
+          cg=json.loads(re.search(r'const CATCH_UI_GROUPS=(\{.*?\});',catch).group(1))
+          tg=json.loads(re.search(r'const FISH_GROUPS=(\{.*?\});',tackle).group(1))
+          assert sum(map(len,cg.values())) == 115
+          assert sum(map(len,tg.values())) == 115
+
+          for marker in ['TACKLE FIT', '釣況', 'キハダマグロ']:
               assert marker in catch, marker
-
-          for marker in ['TACKLE FIT', '複数選択', 'メーカー', '今の組み合わせを確認', 'おすすめ構成を作る', '持っている釣具']:
+          for marker in ['TACKLE FIT', '複数選択', 'メーカー', '判定までの入力', 'おすすめ作成までの入力', '手持ち最適化までの入力']:
               assert marker in tackle, marker
 
-          print({'catch_bytes': len(catch.encode()), 'tackle_bytes': len(tackle.encode()), 'ok': True})
+          print({'catch_bytes': len(catch.encode()), 'tackle_bytes': len(tackle.encode()), 'fish':115, 'ok': True})
