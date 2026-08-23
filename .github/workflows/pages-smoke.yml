@@ -2,8 +2,6 @@ name: GitHub Pages Smoke
 
 on:
   push:
-    branches: [ops/pages-smoke]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -17,7 +15,7 @@ jobs:
           set -euo pipefail
           BASE="https://48wr9f4wgp-lab.github.io/tackle-fit"
           ok=0
-          for i in $(seq 1 18); do
+          for i in $(seq 1 24); do
             code=$(curl -L -sS -o /tmp/home.html -w '%{http_code}' "$BASE/" || true)
             echo "attempt=$i status=$code"
             if [ "$code" = "200" ]; then ok=1; break; fi
@@ -29,7 +27,7 @@ jobs:
           curl -LfsS "$BASE/manifest.json" -o /tmp/manifest.json
           grep -q 'Tackle Fit' /tmp/home.html
           grep -q '読み込み中' /tmp/catch-loader.html
-          grep -q '読み込み中' /tmp/tackle-loader.html
+          grep -q 'tackle-r' /tmp/tackle-loader.html
 
       - name: Reconstruct served catch and tackle payloads
         shell: bash
@@ -37,19 +35,21 @@ jobs:
           set -euo pipefail
           BASE="https://48wr9f4wgp-lab.github.io/tackle-fit"
           for f in catch-p0.txt catch-p1.txt catch-p2.txt catch-p3.txt; do curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
-          for f in tackle-q0.txt tackle-q1.txt tackle-q2a.txt tackle-q2b.txt tackle-q2c.txt; do curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
+          for i in $(seq -w 0 13); do f="tackle-r${i}.txt"; curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
           python - <<'PY'
-          import base64,gzip,pathlib
+          import base64,gzip,pathlib,hashlib,json,re
           p=pathlib.Path('/tmp')
           catch=''.join((p/f'catch-p{i}.txt').read_text() for i in range(4))
-          tackle=''.join((p/f).read_text() for f in ['tackle-q0.txt','tackle-q1.txt','tackle-q2a.txt','tackle-q2b.txt','tackle-q2c.txt'])
+          tackle=''.join((p/f'tackle-r{i:02d}.txt').read_text() for i in range(14))
           c=gzip.decompress(base64.b64decode(catch)).decode('utf-8')
           t=gzip.decompress(base64.b64decode(tackle)).decode('utf-8')
-          assert len(c)>20000, len(c)
-          assert len(t)>50000, len(t)
-          for marker in ['TACKLE FIT','釣況']:
-              assert marker in c, marker
-          for marker in ['TACKLE FIT','組み合わせを確認','おすすめ構成を作る','持っている釣具','メーカー']:
-              assert marker in t, marker
-          print('PAGES_SMOKE_OK', len(c), len(t))
+          assert len(c.encode()) == 69791
+          assert hashlib.sha256(c.encode()).hexdigest() == '3f986264896ca72e490791a637590954fc8970b80c955bba13c715afe408c858'
+          assert len(t.encode()) == 154105
+          assert hashlib.sha256(t.encode()).hexdigest() == 'deb914a3757626b805210d7c01659648208fb4e62335997762e0b18a262f4837'
+          cg=json.loads(re.search(r'const CATCH_UI_GROUPS=(\{.*?\});',c).group(1))
+          tg=json.loads(re.search(r'const FISH_GROUPS=(\{.*?\});',t).group(1))
+          assert sum(map(len,cg.values())) == 115
+          assert sum(map(len,tg.values())) == 115
+          print('PAGES_SMOKE_OK', len(c.encode()), len(t.encode()), 'fish=115')
           PY
