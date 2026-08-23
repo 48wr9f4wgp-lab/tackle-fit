@@ -1,0 +1,89 @@
+name: V18 Guided Flow Verify
+
+on:
+  push:
+    branches: [fix/v18-guided-flow]
+  pull_request:
+    branches: [main]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check patch syntax
+        run: |
+          node --check v18-a.js
+          node --check v18-b.js
+          node --check v18-c.js
+          grep -q 'v18-a.js' tackle.html
+          grep -q 'v18-b.js' tackle.html
+          grep -q 'v18-c.js' tackle.html
+      - name: Install Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run guided-flow E2E
+        shell: bash
+        run: |
+          python3 -m http.server 8000 >/tmp/http.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          sleep 2
+          cat > v18.spec.js <<'EOF'
+          const { test, expect } = require('@playwright/test');
+          const BASE='http://127.0.0.1:8000';
+
+          test('fish selection keeps every method visible and shows recommendations', async ({page})=>{
+            await page.goto(BASE+'/tackle.html',{waitUntil:'networkidle'});
+            await page.evaluate(()=>{localStorage.clear()});
+            await page.reload({waitUntil:'networkidle'});
+            await expect(page.getByText('MVP 1.8 — Guided Tackle Flow')).toBeVisible();
+            const group=page.locator('details.fish-group').filter({hasText:'海｜中型・大型'});
+            await group.locator('summary').click();
+            const fish=group.locator('button[data-fish-name="ブリ"]');
+            await fish.scrollIntoViewIfNeeded();
+            const before=await page.locator('.scroll').evaluate(el=>el.scrollTop);
+            await fish.click();
+            await page.waitForTimeout(100);
+            const after=await page.locator('.scroll').evaluate(el=>el.scrollTop);
+            expect(after).toBeGreaterThan(150);
+            expect(Math.abs(after-before)).toBeLessThan(450);
+            await expect(page.locator('button[data-multi="methods"][data-value="アジング"]')).toBeVisible();
+            await expect(page.locator('#fish-guide')).toBeVisible();
+            await expect(page.locator('#fish-guide').getByText('ショアジギング',{exact:false}).first()).toBeVisible();
+            await expect(page.locator('#fish-guide').getByText('PE',{exact:true}).first()).toBeVisible();
+            await expect(page.locator('#fish-guide').getByText('リール',{exact:true}).first()).toBeVisible();
+          });
+
+          test('open fish group and search text survive rerender', async ({page})=>{
+            await page.goto(BASE+'/tackle.html',{waitUntil:'networkidle'});
+            await page.evaluate(()=>localStorage.clear());
+            await page.reload({waitUntil:'networkidle'});
+            const q=page.locator('#fish-search');
+            await q.fill('サゴシ');
+            const sawara=page.locator('button[data-fish-name="サワラ"]').first();
+            await expect(sawara).toBeVisible();
+            await sawara.click();
+            await expect(page.locator('#fish-search')).toHaveValue('サゴシ');
+            await expect(page.locator('details.fish-group').filter({hasText:'海｜中型・大型'})).toHaveAttribute('open','');
+          });
+
+          test('recommendation can choose method and exposes product candidates', async ({page})=>{
+            await page.goto(BASE+'/tackle.html',{waitUntil:'networkidle'});
+            await page.evaluate(()=>localStorage.clear());
+            await page.reload({waitUntil:'networkidle'});
+            await page.locator('button[data-fish-name="アジ"]').first().click();
+            const guide=page.locator('#fish-guide');
+            await expect(guide.getByText('アジング',{exact:false}).first()).toBeVisible();
+            const details=guide.locator('details.reco-products').first();
+            await details.locator('summary').click();
+            await expect(details.getByText('ロッド',{exact:true})).toBeVisible();
+            await expect(details.getByText('リール',{exact:true})).toBeVisible();
+            await expect(details.getByText('PE',{exact:true})).toBeVisible();
+            await guide.locator('[data-recommend-method="アジング"]').click();
+            await expect(page.locator('button[data-multi="methods"][data-value="アジング"]')).toHaveClass(/active/);
+          });
+          EOF
+          npx playwright test v18.spec.js --reporter=line --workers=1
