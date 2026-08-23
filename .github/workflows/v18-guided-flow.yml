@@ -52,10 +52,11 @@ jobs:
             expect(after).toBeGreaterThan(150);
             expect(Math.abs(after-before)).toBeLessThan(450);
             await expect(page.locator('button[data-multi="methods"][data-value="アジング"]')).toBeVisible();
-            await expect(page.locator('#fish-guide')).toBeVisible();
-            await expect(page.locator('#fish-guide').getByText('ショアジギング',{exact:false}).first()).toBeVisible();
-            await expect(page.locator('#fish-guide').getByText('PE',{exact:true}).first()).toBeVisible();
-            await expect(page.locator('#fish-guide').getByText('リール',{exact:true}).first()).toBeVisible();
+            const guide=page.locator('#fish-guide');
+            await expect(guide).toBeVisible();
+            await expect(guide.getByText('ショアジギング',{exact:false}).first()).toBeVisible();
+            await expect(guide.locator('.spec-mini').filter({hasText:'PE'}).first()).toBeVisible();
+            await expect(guide.locator('.spec-mini').filter({hasText:'リール'}).first()).toBeVisible();
           });
 
           test('open fish group and search text survive rerender', async ({page})=>{
