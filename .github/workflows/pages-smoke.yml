@@ -3,6 +3,8 @@ name: GitHub Pages Smoke
 on:
   push:
     branches: [ops/pages-smoke]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
