@@ -53,10 +53,10 @@ jobs:
           test('catch searches and selects added fish', async ({ page }) => {
             await page.goto(BASE + '/catch.html', { waitUntil: 'networkidle' });
             await page.locator('#catch-fish-search').fill('キハダマグロ');
-            const fish=page.locator('button[data-fish-name="キハダマグロ"]').first();
+            const fish=page.locator('button[data-fish="キハダマグロ"]').first();
             await expect(fish).toBeVisible();
             await fish.click();
-            await expect(fish).toHaveClass(/active/);
+            await expect(fish).toHaveClass(/on/);
           });
 
           test('tackle guidance reaches result and mode requirements are clear', async ({ page }) => {
@@ -75,7 +75,6 @@ jobs:
             await expect(page.locator('#show-result')).toBeEnabled();
             await page.locator('#show-result').click();
             await expect(page.locator('#result-card')).toBeVisible();
-
             await page.getByRole('button',{name:'おすすめ構成を作る'}).click();
             await expect(page.getByText(/2\/2 入力済み|0\/2 入力済み/)).toBeVisible();
             await page.getByRole('button',{name:'持っている釣具'}).click();
