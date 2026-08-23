@@ -1,0 +1,53 @@
+name: GitHub Pages Smoke
+
+on:
+  push:
+    branches: [ops/pages-smoke]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Pages and verify routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://48wr9f4wgp-lab.github.io/tackle-fit"
+          ok=0
+          for i in $(seq 1 18); do
+            code=$(curl -L -sS -o /tmp/home.html -w '%{http_code}' "$BASE/" || true)
+            echo "attempt=$i status=$code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 10
+          done
+          test "$ok" = "1"
+          curl -LfsS "$BASE/catch.html" -o /tmp/catch-loader.html
+          curl -LfsS "$BASE/tackle.html" -o /tmp/tackle-loader.html
+          curl -LfsS "$BASE/manifest.json" -o /tmp/manifest.json
+          grep -q 'Tackle Fit' /tmp/home.html
+          grep -q '読み込み中' /tmp/catch-loader.html
+          grep -q '読み込み中' /tmp/tackle-loader.html
+
+      - name: Reconstruct served catch and tackle payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://48wr9f4wgp-lab.github.io/tackle-fit"
+          for f in catch-p0.txt catch-p1.txt catch-p2.txt catch-p3.txt; do curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
+          for f in tackle-q0.txt tackle-q1.txt tackle-q2a.txt tackle-q2b.txt tackle-q2c.txt; do curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
+          python - <<'PY'
+          import base64,gzip,pathlib
+          p=pathlib.Path('/tmp')
+          catch=''.join((p/f'catch-p{i}.txt').read_text() for i in range(4))
+          tackle=''.join((p/f).read_text() for f in ['tackle-q0.txt','tackle-q1.txt','tackle-q2a.txt','tackle-q2b.txt','tackle-q2c.txt'])
+          c=gzip.decompress(base64.b64decode(catch)).decode('utf-8')
+          t=gzip.decompress(base64.b64decode(tackle)).decode('utf-8')
+          assert len(c)>20000, len(c)
+          assert len(t)>50000, len(t)
+          for marker in ['TACKLE FIT','釣況']:
+              assert marker in c, marker
+          for marker in ['TACKLE FIT','組み合わせを確認','おすすめ構成を作る','持っている釣具','メーカー']:
+              assert marker in t, marker
+          print('PAGES_SMOKE_OK', len(c), len(t))
+          PY
