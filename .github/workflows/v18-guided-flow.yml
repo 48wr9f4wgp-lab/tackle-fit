@@ -44,10 +44,11 @@ jobs:
             await group.locator('summary').click();
             const fish=group.locator('button[data-fish-name="ブリ"]');
             await fish.scrollIntoViewIfNeeded();
-            const before=await page.locator('.scroll').evaluate(el=>el.scrollTop);
+            const before=await page.evaluate(()=>Math.max(window.scrollY,document.querySelector('.scroll')?.scrollTop||0));
             await fish.click();
             await page.waitForTimeout(100);
-            const after=await page.locator('.scroll').evaluate(el=>el.scrollTop);
+            const after=await page.evaluate(()=>Math.max(window.scrollY,document.querySelector('.scroll')?.scrollTop||0));
+            expect(before).toBeGreaterThan(150);
             expect(after).toBeGreaterThan(150);
             expect(Math.abs(after-before)).toBeLessThan(450);
             await expect(page.locator('button[data-multi="methods"][data-value="アジング"]')).toBeVisible();
