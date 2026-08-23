@@ -1,0 +1,57 @@
+name: Pages Browser E2E
+
+on:
+  push:
+    branches: [ops/pages-smoke]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run live Pages interaction checks
+        shell: bash
+        run: |
+          cat > pages.spec.js <<'EOF'
+          const { test, expect } = require('@playwright/test');
+          const BASE = 'https://48wr9f4wgp-lab.github.io/tackle-fit';
+
+          test('home navigation works', async ({ page }) => {
+            await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+            await expect(page.getByText('釣況', { exact: true }).first()).toBeVisible();
+            await page.getByRole('link', { name: /今どう釣る/ }).click();
+            await expect(page).toHaveURL(/catch\.html/);
+            await expect(page.getByRole('button', { name: /現在地から/ })).toBeVisible();
+          });
+
+          test('catch fish selection reacts', async ({ page }) => {
+            await page.goto(BASE + '/catch.html', { waitUntil: 'networkidle' });
+            const fish = page.locator('button[data-fish="サワラ"]');
+            await expect(fish).toBeVisible();
+            await fish.click();
+            await expect(page.locator('button[data-fish="サワラ"]')).toHaveClass(/on/);
+          });
+
+          test('tackle three modes switch', async ({ page }) => {
+            await page.goto(BASE + '/tackle.html', { waitUntil: 'networkidle' });
+            const reverse = page.getByRole('button', { name: 'おすすめ構成を作る' });
+            const gear = page.getByRole('button', { name: '持っている釣具' });
+            const check = page.getByRole('button', { name: '今の組み合わせを確認' });
+            await expect(check).toBeVisible();
+            await reverse.click();
+            await expect(reverse).toHaveClass(/active/);
+            await gear.click();
+            await expect(gear).toHaveClass(/active/);
+            await check.click();
+            await expect(check).toHaveClass(/active/);
+          });
+          EOF
+          npx playwright test pages.spec.js --reporter=line --workers=1
