@@ -21,13 +21,13 @@ jobs:
           import base64, gzip, hashlib, pathlib
           p=pathlib.Path('.')
           catch=''.join((p/f'catch-p{i}.txt').read_text() for i in range(4))
-          tackle=''.join((p/f).read_text() for f in ['tackle-q0.txt','tackle-q1.txt','tackle-q2a.txt','tackle-q2b.txt','tackle-q2c.txt'])
+          tackle=''.join((p/f'tackle-r{i:02d}.txt').read_text() for i in range(14))
           c=gzip.decompress(base64.b64decode(catch)).decode('utf-8')
           t=gzip.decompress(base64.b64decode(tackle)).decode('utf-8')
           assert len(c.encode()) == 69791, len(c.encode())
           assert hashlib.sha256(c.encode()).hexdigest() == '3f986264896ca72e490791a637590954fc8970b80c955bba13c715afe408c858'
-          assert len(t.encode()) == 154458, len(t.encode())
-          assert hashlib.sha256(t.encode()).hexdigest() == '9f3305a34c9f9cc53050e200221497d368e526f1eca83da5e7082710aff70cf8'
+          assert len(t.encode()) == 154105, len(t.encode())
+          assert hashlib.sha256(t.encode()).hexdigest() == 'deb914a3757626b805210d7c01659648208fb4e62335997762e0b18a262f4837'
           for marker in ['115', 'catch-fish-search', '近似ランキング', 'キハダマグロ']:
               assert marker in c, marker
           for marker in ['115魚種', '判定までの入力', 'おすすめ作成までの入力', '手持ち最適化までの入力', 'fish-search', '組み合わせを確認']:
