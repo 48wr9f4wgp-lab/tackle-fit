@@ -1,0 +1,85 @@
+name: Live v1.8 Verify
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for v1.8 GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://48wr9f4wgp-lab.github.io/tackle-fit'
+          ok=0
+          for i in $(seq 1 30); do
+            body=$(curl -LfsS "$BASE/tackle.html?check=$i" || true)
+            if printf '%s' "$body" | grep -q 'v18-a.js'; then ok=1; break; fi
+            echo "waiting for v1.8 pages: $i"
+            sleep 10
+          done
+          test "$ok" = "1"
+          for f in v18-a.js v18-b.js v18-c.js; do curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
+          grep -q 'Guided Tackle Flow' /tmp/v18-c.js
+          grep -q 'method-recommended' /tmp/v18-a.js
+          grep -q 'おすすめは緑枠' /tmp/v18-b.js
+
+      - name: Install Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Click through live v1.8
+        shell: bash
+        run: |
+          cat > live-v18.spec.js <<'EOF'
+          const { test, expect } = require('@playwright/test');
+          const BASE='https://48wr9f4wgp-lab.github.io/tackle-fit';
+
+          test('live fish selection preserves position and keeps all methods', async ({page})=>{
+            await page.goto(BASE+'/tackle.html?live=v18',{waitUntil:'networkidle'});
+            await page.evaluate(()=>localStorage.clear());
+            await page.reload({waitUntil:'networkidle'});
+            await expect(page.getByText('MVP 1.8 — Guided Tackle Flow')).toBeVisible();
+            const group=page.locator('details.fish-group').filter({hasText:'海｜中型・大型'});
+            await group.locator('summary').click();
+            const fish=group.locator('button[data-fish-name="ブリ"]');
+            await fish.scrollIntoViewIfNeeded();
+            const before=await page.evaluate(()=>Math.max(window.scrollY,document.querySelector('.scroll')?.scrollTop||0));
+            await fish.click();
+            await page.waitForTimeout(150);
+            const after=await page.evaluate(()=>Math.max(window.scrollY,document.querySelector('.scroll')?.scrollTop||0));
+            expect(before).toBeGreaterThan(150);
+            expect(after).toBeGreaterThan(150);
+            expect(Math.abs(after-before)).toBeLessThan(450);
+            await expect(page.locator('button[data-multi="methods"][data-value="アジング"]')).toBeVisible();
+            const guide=page.locator('#fish-guide');
+            await expect(guide).toBeVisible();
+            await expect(guide.getByText('ショアジギング',{exact:false}).first()).toBeVisible();
+            await expect(guide.locator('.spec-mini').filter({hasText:'PE'}).first()).toBeVisible();
+          });
+
+          test('live fish search and recommendation products work', async ({page})=>{
+            await page.goto(BASE+'/tackle.html?live=v18b',{waitUntil:'networkidle'});
+            await page.evaluate(()=>localStorage.clear());
+            await page.reload({waitUntil:'networkidle'});
+            await page.locator('#fish-search').fill('サゴシ');
+            const sawara=page.locator('button[data-fish-name="サワラ"]').first();
+            await expect(sawara).toBeVisible();
+            await sawara.click();
+            await expect(page.locator('#fish-search')).toHaveValue('サゴシ');
+            await page.locator('#fish-search').fill('');
+            await page.locator('button[data-fish-name="アジ"]').first().click();
+            const guide=page.locator('#fish-guide');
+            await expect(guide.getByText('アジング',{exact:false}).first()).toBeVisible();
+            const details=guide.locator('details.reco-products').first();
+            await details.locator('summary').click();
+            await expect(details.getByText('ロッド',{exact:true})).toBeVisible();
+            await expect(details.getByText('リール',{exact:true})).toBeVisible();
+            await expect(details.getByText('PE',{exact:true})).toBeVisible();
+          });
+          EOF
+          npx playwright test live-v18.spec.js --reporter=line --workers=1
