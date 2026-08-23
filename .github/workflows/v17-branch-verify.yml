@@ -69,18 +69,15 @@ jobs:
             await expect(page.getByText('0/6 入力済み')).toBeVisible();
             const result=page.locator('#show-result');
             await expect(result).toBeDisabled();
-
             await page.locator('#fish-search').fill('チヌ');
             await expect(page.locator('button[data-multi="targets"][data-value="クロダイ"]').first()).toBeVisible();
             await page.locator('#fish-search').fill('');
-
             await page.locator('button[data-multi="targets"][data-value="ブリ"]').first().click();
             await page.locator('button[data-multi="methods"][data-value="ショアジギング"]').click();
             await page.locator('button[data-multi="lures"][data-value="メタルジグ"]').click();
             await firstProduct(page,'rod');
             await firstProduct(page,'main_line');
             await firstProduct(page,'reel');
-
             await expect(page.getByText('6/6 入力済み')).toBeVisible();
             await expect(page.locator('#show-result')).toBeEnabled();
             await page.locator('#show-result').click();
@@ -102,10 +99,10 @@ jobs:
           test('catch page can search and select newly added species', async ({ page }) => {
             await page.goto(BASE+'/catch.html', {waitUntil:'networkidle'});
             await page.locator('#catch-fish-search').fill('キハダマグロ');
-            const fish=page.locator('button[data-fish-name="キハダマグロ"]').first();
+            const fish=page.locator('button[data-fish="キハダマグロ"]').first();
             await expect(fish).toBeVisible();
             await fish.click();
-            await expect(fish).toHaveClass(/active/);
+            await expect(fish).toHaveClass(/on/);
           });
           EOF
           npx playwright test v17.spec.js --reporter=line --workers=1
