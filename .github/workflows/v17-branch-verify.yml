@@ -18,7 +18,7 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          import base64, gzip, hashlib, pathlib
+          import base64, gzip, hashlib, pathlib, json, re
           p=pathlib.Path('.')
           catch=''.join((p/f'catch-p{i}.txt').read_text() for i in range(4))
           tackle=''.join((p/f'tackle-r{i:02d}.txt').read_text() for i in range(14))
@@ -28,11 +28,15 @@ jobs:
           assert hashlib.sha256(c.encode()).hexdigest() == '3f986264896ca72e490791a637590954fc8970b80c955bba13c715afe408c858'
           assert len(t.encode()) == 154105, len(t.encode())
           assert hashlib.sha256(t.encode()).hexdigest() == 'deb914a3757626b805210d7c01659648208fb4e62335997762e0b18a262f4837'
-          for marker in ['115', 'catch-fish-search', '近似ランキング', 'キハダマグロ']:
+          catch_groups=json.loads(re.search(r'const CATCH_UI_GROUPS=(\{.*?\});', c).group(1))
+          tackle_groups=json.loads(re.search(r'const FISH_GROUPS=(\{.*?\});', t).group(1))
+          assert sum(map(len,catch_groups.values())) == 115
+          assert sum(map(len,tackle_groups.values())) == 115
+          for marker in ['catch-fish-search', '近似ランキング', 'キハダマグロ']:
               assert marker in c, marker
-          for marker in ['115魚種', '判定までの入力', 'おすすめ作成までの入力', '手持ち最適化までの入力', 'fish-search', '組み合わせを確認']:
+          for marker in ['判定までの入力', 'おすすめ作成までの入力', '手持ち最適化までの入力', 'fish-search', '組み合わせを確認']:
               assert marker in t, marker
-          print('PAYLOAD_OK', len(c.encode()), len(t.encode()))
+          print('PAYLOAD_OK', len(c.encode()), len(t.encode()), 'fish=115')
           PY
 
       - name: Install Playwright Chromium
