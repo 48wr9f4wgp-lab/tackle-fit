@@ -1,0 +1,93 @@
+name: Live v1.7 Verify
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for v1.7 GitHub Pages and verify payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://48wr9f4wgp-lab.github.io/tackle-fit'
+          ok=0
+          for i in $(seq 1 36); do
+            body=$(curl -LfsS "$BASE/tackle.html" || true)
+            if printf '%s' "$body" | grep -q 'tackle-r'; then ok=1; break; fi
+            echo "waiting for v1.7 pages: $i"
+            sleep 10
+          done
+          test "$ok" = "1"
+          for f in catch-p0.txt catch-p1.txt catch-p2.txt catch-p3.txt; do curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
+          for i in $(seq -w 0 13); do f="tackle-r${i}.txt"; curl -LfsS "$BASE/$f" -o "/tmp/$f"; done
+          python - <<'PY'
+          import base64,gzip,pathlib,hashlib,json,re
+          p=pathlib.Path('/tmp')
+          c=gzip.decompress(base64.b64decode(''.join((p/f'catch-p{i}.txt').read_text() for i in range(4)))).decode()
+          t=gzip.decompress(base64.b64decode(''.join((p/f'tackle-r{i:02d}.txt').read_text() for i in range(14)))).decode()
+          assert len(c.encode()) == 69791
+          assert hashlib.sha256(c.encode()).hexdigest() == '3f986264896ca72e490791a637590954fc8970b80c955bba13c715afe408c858'
+          assert len(t.encode()) == 154105
+          assert hashlib.sha256(t.encode()).hexdigest() == 'deb914a3757626b805210d7c01659648208fb4e62335997762e0b18a262f4837'
+          cg=json.loads(re.search(r'const CATCH_UI_GROUPS=(\{.*?\});',c).group(1))
+          tg=json.loads(re.search(r'const FISH_GROUPS=(\{.*?\});',t).group(1))
+          assert sum(map(len,cg.values())) == 115
+          assert sum(map(len,tg.values())) == 115
+          print('LIVE_PAYLOAD_OK',len(c.encode()),len(t.encode()),'fish=115')
+          PY
+
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Click through live v1.7
+        shell: bash
+        run: |
+          cat > live.spec.js <<'EOF'
+          const { test, expect } = require('@playwright/test');
+          const BASE='https://48wr9f4wgp-lab.github.io/tackle-fit';
+          async function firstProduct(page, cat) {
+            const s=page.locator(`select[data-product="${cat}"]`);
+            const v=await s.locator('option:not([value=""])').first().getAttribute('value');
+            if(!v) throw Error('no product '+cat);
+            await s.selectOption(v);
+          }
+          test('live catch supports added fish', async({page})=>{
+            await page.goto(BASE+'/catch.html',{waitUntil:'networkidle'});
+            await page.locator('#catch-fish-search').fill('キハダマグロ');
+            const fish=page.locator('button[data-fish="キハダマグロ"]').first();
+            await expect(fish).toBeVisible();
+            await fish.click();
+            await expect(fish).toHaveClass(/on/);
+          });
+          test('live tackle makes required input obvious and reaches result', async({page})=>{
+            await page.goto(BASE+'/tackle.html',{waitUntil:'networkidle'});
+            await page.evaluate(()=>localStorage.clear());
+            await page.reload({waitUntil:'networkidle'});
+            await expect(page.getByText('0/6 入力済み')).toBeVisible();
+            await expect(page.locator('#show-result')).toBeDisabled();
+            await page.locator('#fish-search').fill('チヌ');
+            await expect(page.locator('button[data-multi="targets"][data-value="クロダイ"]').first()).toBeVisible();
+            await page.locator('#fish-search').fill('');
+            await page.locator('button[data-multi="targets"][data-value="ブリ"]').first().click();
+            await page.locator('button[data-multi="methods"][data-value="ショアジギング"]').click();
+            await page.locator('button[data-multi="lures"][data-value="メタルジグ"]').click();
+            await firstProduct(page,'rod');
+            await firstProduct(page,'main_line');
+            await firstProduct(page,'reel');
+            await expect(page.getByText('6/6 入力済み')).toBeVisible();
+            await expect(page.locator('#show-result')).toBeEnabled();
+            await page.locator('#show-result').click();
+            await expect(page.locator('#result-card')).toBeVisible();
+            await page.getByRole('button',{name:'おすすめ構成を作る'}).click();
+            await expect(page.getByText(/2\/2 入力済み|0\/2 入力済み/)).toBeVisible();
+            await page.getByRole('button',{name:'持っている釣具'}).click();
+            await expect(page.getByText(/3\/3 入力済み|0\/3 入力済み/)).toBeVisible();
+          });
+          EOF
+          npx playwright test live.spec.js --reporter=line --workers=1
