@@ -1,0 +1,39 @@
+name: Static Trial Integrity
+
+on:
+  push:
+    branches: [dev/v2-nextjs]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-static-trial:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Reconstruct and verify trial pages
+        shell: python
+        run: |
+          from pathlib import Path
+          import base64, gzip
+
+          def rebuild(parts):
+              payload = ''.join(Path(p).read_text(encoding='utf-8').strip() for p in parts)
+              return gzip.decompress(base64.b64decode(payload)).decode('utf-8')
+
+          catch = rebuild(['catch-p0.txt','catch-p1.txt','catch-p2.txt','catch-p3.txt'])
+          tackle = rebuild(['tackle-q0.txt','tackle-q1.txt','tackle-q2a.txt','tackle-q2b.txt','tackle-q2c.txt'])
+
+          assert len(catch) > 50000, len(catch)
+          assert len(tackle) > 120000, len(tackle)
+
+          for marker in ['TACKLE FIT', '釣況']:
+              assert marker in catch, marker
+
+          for marker in ['TACKLE FIT', '複数選択', 'メーカー', '今の組み合わせを確認', 'おすすめ構成を作る', '持っている釣具']:
+              assert marker in tackle, marker
+
+          print({'catch_bytes': len(catch.encode()), 'tackle_bytes': len(tackle.encode()), 'ok': True})
