@@ -8,7 +8,7 @@ function has(re, msg) {
 }
 
 // Production shape / transport guard
-has(/const VERSION='7\.5\.0-github'/, 'Expected current stable COMBAT HUB version');
+has(/const VERSION='7\.6\.0-github'/, 'Expected current stable COMBAT HUB version');
 has(/UFC:'ufc'/, 'UFC parameter missing');
 has(/RIZIN:'rizin'/, 'RIZIN parameter missing');
 has(/ONE:'one'/, 'ONE parameter missing');
@@ -58,9 +58,13 @@ has(/'VS',15\.2,new Color\(S\.accent\),'black'/, 'Main VS emphasis regressed');
 has(/mainSize:13\.4/, 'Main fighter font emphasis missing');
 has(/mainSize:13\.6/, 'Main fighter font emphasis missing for short-name layouts');
 
-// Symmetric main-card layout guards.
-has(/centerBox\.size=new Size\(44,0\)/, 'Main center column width regressed');
-has(/an\.centerAlignText\(\)/, 'Left main fighter is not centered');
-has(/bn\.centerAlignText\(\)/, 'Right main fighter is not centered');
+// Symmetric fixed-height main-card layout guards.
+has(/aBox\.size=new Size\(140,36\)/, 'Left main fighter box lost fixed height');
+has(/centerBox\.size=new Size\(44,36\)/, 'Main center column lost fixed height');
+has(/bBox\.size=new Size\(140,36\)/, 'Right main fighter box lost fixed height');
+has(/aBox\.addSpacer\(\);const an=/, 'Left main fighter is not vertically centered');
+has(/bBox\.addSpacer\(\);const bn=/, 'Right main fighter is not vertically centered');
+has(/an\.centerAlignText\(\)/, 'Left main fighter is not horizontally centered');
+has(/bn\.centerAlignText\(\)/, 'Right main fighter is not horizontally centered');
 
 console.log('COMBAT HUB regression checks: OK');
