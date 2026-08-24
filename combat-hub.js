@@ -1,10 +1,10 @@
 // COMBAT HUB — GitHub Standalone / Personal
 // Scriptable 1本で UFC / RIZIN / ONE / BOXING / K-1 を表示
 // Home Screen Widget Parameter: UFC / RIZIN / ONE / BOXING / K1
-// v6.0.0-github — widget runtime has NO Vercel dependency
+// v6.1.0-github — widget runtime has NO Vercel dependency
 
 (async () => {
-const VERSION = '6.0.0-github';
+const VERSION = '6.1.0-github';
 const MODE_MAP = {UFC:'ufc',RIZIN:'rizin',ONE:'one',BOXING:'boxing',K1:'k1'};
 const LABELS = ['UFC','RIZIN','ONE','BOXING','K-1'];
 const PARAMS = ['UFC','RIZIN','ONE','BOXING','K1'];
@@ -34,8 +34,6 @@ const SERIES = {
 const S = SERIES[KEY];
 const C = {text:'#F7F8FA',sub:'#CDD2D9',muted:'#8B929D'};
 
-// ChatGPT updates only this GitHub file when cards change.
-// Scriptable users never repaste the long body again.
 const SNAPSHOT = {
   ufc:{
     startAt:'2026-08-29T10:00:00.000Z',location:'上海',
@@ -99,7 +97,6 @@ async function reqText(url,timeout=9){const r=new Request(url);r.timeoutInterval
 function metaImage(html,base){const tags=html.match(/<meta\b[^>]*>/gi)||[];for(const tag of tags){if(!/property=["']og:image["']/i.test(tag)&&!/name=["']twitter:image["']/i.test(tag))continue;const m=tag.match(/content=["']([^"']+)["']/i);if(m)return absoluteURL(m[1].replace(/&amp;/g,'&'),base)}return null}
 async function cachedImage(url,ns='auto'){if(!url)return null;const path=fm.joinPath(DOC,`combat-${ns}-${safeKey(url)}.jpg`);if(fm.fileExists(path)){try{return fm.readImage(path)}catch(_){}}try{const r=new Request(url);r.timeoutInterval=10;r.headers={'User-Agent':'Mozilla/5.0'};const img=await r.loadImage();fm.writeImage(path,img);return img}catch(_){return null}}
 
-// UFC hero profiles — direct official pages, cached on iPhone.
 const UFC_PROFILES = {
   NURMAGOMEDOV:'https://www.ufc.com/athlete/umar-nurmagomedov',
   SONG:'https://www.ufc.com/athlete/yadong-song'
@@ -113,7 +110,6 @@ async function ufcProfile(name){
   return{name:jp,image:await cachedImage(imgURL,'ufc')};
 }
 
-// RIZIN hero profiles — discover fighter tag links from the current official card.
 function anchors(html,base){const out=[];const re=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi;let m;while((m=re.exec(html))){const href=(m[1].match(/href=["']([^"']+)["']/i)||[])[1];if(href)out.push({href:absoluteURL(href.replace(/&amp;/g,'&'),base),label:stripHTML(m[2])})}return out}
 function attr(tag,name){const m=tag.match(new RegExp(`${name}=["']([^"']+)["']`,'i'));return m?m[1].replace(/&amp;/g,'&'):null}
 function rizinImg(html,url,name){for(const tag of html.match(/<img\b[^>]*>/gi)||[]){const alt=stripHTML(attr(tag,'alt')||'');if(alt&&(alt.includes(name)||name.includes(alt))){const src=attr(tag,'data-src')||attr(tag,'data-original')||attr(tag,'src');if(src)return absoluteURL(src,url)}}return metaImage(html,url)}
@@ -130,9 +126,30 @@ async function rizinProfiles(){
   }catch(_){return{a:{name:D.main.a,image:null},b:{name:D.main.b,image:null}}}
 }
 
+const ONE_PROFILES = {
+  'ワラポン・ソー・デチャパン':'https://www.onefc.com/jp/athletes/worapon-sor-dechapan/',
+  'レニー・ブラジ':'https://www.onefc.com/jp/athletes/lenny-blasi/'
+};
+async function oneProfile(name){
+  const url=ONE_PROFILES[name];
+  if(!url)return{name,image:null};
+  let display=name,imgURL=null;
+  try{
+    const h=await reqText(url);
+    imgURL=metaImage(h,url);
+    const m=h.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+    if(m)display=stripHTML(m[1])||display;
+  }catch(_){}
+  return{name:display,image:await cachedImage(imgURL,'one')};
+}
+async function oneProfiles(){
+  return{a:await oneProfile(D.main.a),b:await oneProfile(D.main.b)};
+}
+
 async function heroContext(){
   if(KEY==='ufc')return{a:await ufcProfile(D.main.a),b:await ufcProfile(D.main.b)};
   if(KEY==='rizin')return await rizinProfiles();
+  if(KEY==='one')return await oneProfiles();
   return{a:{name:D.main.a,image:null},b:{name:D.main.b,image:null}};
 }
 
@@ -146,7 +163,8 @@ function bg(a,b){
   c.setFillColor(new Color('#040506'));c.fillRect(new Rect(0,0,720,338));
   if(a)c.drawImageInRect(a,imageRect(a,-5,360,'left'));
   if(b)c.drawImageInRect(b,imageRect(b,365,360,'right'));
-  c.setFillColor(new Color('#000000',.73));c.fillRect(new Rect(0,0,720,338));
+  const shade=KEY==='rizin'?.80:KEY==='one'?.78:.73;
+  c.setFillColor(new Color('#000000',shade));c.fillRect(new Rect(0,0,720,338));
   c.setFillColor(new Color('#000000',.17));c.fillRect(new Rect(0,155,720,183));
   c.setFillColor(new Color('#000000',.15));c.fillRect(new Rect(0,220,720,118));
   c.setFillColor(new Color(S.accent,.022));c.fillRect(new Rect(352,0,16,338));
