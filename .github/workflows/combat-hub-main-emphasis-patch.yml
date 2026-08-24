@@ -1,5 +1,6 @@
 name: COMBAT HUB Main Event Emphasis Patch
 
+# one-shot trigger v2
 on:
   push:
     paths:
