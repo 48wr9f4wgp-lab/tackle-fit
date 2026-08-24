@@ -8,7 +8,7 @@ function has(re, msg) {
 }
 
 // Production shape / transport guard
-has(/const VERSION='7\.4\.0-github'/, 'Expected current stable COMBAT HUB version');
+has(/const VERSION='7\.5\.0-github'/, 'Expected current stable COMBAT HUB version');
 has(/UFC:'ufc'/, 'UFC parameter missing');
 has(/RIZIN:'rizin'/, 'RIZIN parameter missing');
 has(/ONE:'one'/, 'ONE parameter missing');
@@ -53,9 +53,14 @@ has(/KEY==='k1'\?350:365/, 'K-1 right hero overlap fix missing');
 has(/softBand\(/, 'soft background banding missing');
 
 // Main-event hierarchy guards.
-has(/'MAIN EVENT',6\.4,new Color\(S\.accent\),'bold'/, 'MAIN EVENT emphasis label missing');
+has(/'MAIN EVENT',6\.1,new Color\(S\.accent\),'bold'/, 'MAIN EVENT emphasis label missing');
 has(/'VS',15\.2,new Color\(S\.accent\),'black'/, 'Main VS emphasis regressed');
 has(/mainSize:13\.4/, 'Main fighter font emphasis missing');
 has(/mainSize:13\.6/, 'Main fighter font emphasis missing for short-name layouts');
+
+// Symmetric main-card layout guards.
+has(/centerBox\.size=new Size\(44,0\)/, 'Main center column width regressed');
+has(/an\.centerAlignText\(\)/, 'Left main fighter is not centered');
+has(/bn\.centerAlignText\(\)/, 'Right main fighter is not centered');
 
 console.log('COMBAT HUB regression checks: OK');
