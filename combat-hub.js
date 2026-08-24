@@ -1,10 +1,10 @@
 // COMBAT HUB — GitHub Standalone / Personal
 // Scriptable 1本で UFC / RIZIN / ONE / BOXING / K-1 を表示
 // Home Screen Widget Parameter: UFC / RIZIN / ONE / BOXING / K1
-// v7.2.0-github — final visual cleanup / safe-live engine unchanged
+// v7.3.0-github — K-1 hero blend polish / safe-live engine unchanged
 
 (async()=>{
-const VERSION='7.2.0-github';
+const VERSION='7.3.0-github';
 const MODE_MAP={UFC:'ufc',RIZIN:'rizin',ONE:'one',BOXING:'boxing',K1:'k1'};
 const LABELS=['UFC','RIZIN','ONE','BOXING','K-1'];
 const PARAMS=['UFC','RIZIN','ONE','BOXING','K1'];
@@ -28,7 +28,7 @@ const VISUAL={
   rizin:{heroShade:.70,posterShade:.60,headerShade:.14,mainShade:.13,footShade:.19,veil:.018,gap:17,mainSize:11.4,division:7.2},
   one:{heroShade:.68,posterShade:.44,headerShade:.16,mainShade:.15,footShade:.19,veil:.028,gap:19,mainSize:11.7,division:7.3},
   boxing:{heroShade:.68,posterShade:.52,headerShade:.18,mainShade:.18,footShade:.23,veil:.020,gap:18,mainSize:11.8,division:7.2},
-  k1:{heroShade:.57,posterShade:.46,headerShade:.11,mainShade:.12,footShade:.18,veil:.050,gap:17,mainSize:11.8,division:7.3}
+  k1:{heroShade:.60,posterShade:.46,headerShade:.10,mainShade:.11,footShade:.17,veil:.055,gap:17,mainSize:11.8,division:7.3}
 };
 const V=VISUAL[KEY];
 
@@ -77,7 +77,7 @@ async function heroContext(D){if(KEY==='ufc')return{a:await profileImage(KNOWN_U
 function imageRect(image,x,width,side){if(!image?.size)return new Rect(x,0,width,338);const iw=image.size.width,ih=image.size.height,scale=Math.max(width/iw,338/ih),dw=iw*scale,dh=ih*scale,bias=side==='left'?.03:.97;return new Rect(x+(width-dw)*bias,(338-dh)/2-28,dw,dh);}
 function softBand(c,y0,y1,alpha,feather=22){const h=Math.max(1,y1-y0),f=Math.min(feather,Math.floor(h/2)),step=4;if(h>2*f){c.setFillColor(new Color('#000000',alpha));c.fillRect(new Rect(0,y0+f,720,h-2*f));}for(let y=0;y<f;y+=step){const p=Math.min(1,(y+step/2)/f),hh=Math.min(step,f-y);c.setFillColor(new Color('#000000',alpha*p));c.fillRect(new Rect(0,y0+y,720,hh));c.setFillColor(new Color('#000000',alpha*(1-p)));c.fillRect(new Rect(0,y1-f+y,720,hh));}}
 function softCenter(c,color,alpha){const bands=[84,60,40,24,10];for(let i=0;i<bands.length;i++){const w=bands[i],a=alpha*((i+1)/bands.length)*.34;c.setFillColor(new Color(color,a));c.fillRect(new Rect(360-w/2,0,w,338));}}
-function heroBg(a,b){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#040506'));c.fillRect(new Rect(0,0,720,338));if(a)c.drawImageInRect(a,imageRect(a,-5,360,'left'));if(b)c.drawImageInRect(b,imageRect(b,365,360,'right'));c.setFillColor(new Color('#000000',V.heroShade));c.fillRect(new Rect(0,0,720,338));if(KEY==='k1'){c.setFillColor(new Color(S.accent,.035));c.fillRect(new Rect(0,0,720,338));}softBand(c,0,112,V.headerShade,24);softBand(c,96,232,V.mainShade,24);softBand(c,214,338,V.footShade,24);softCenter(c,S.accent,V.veil);return c.getImage();}
+function heroBg(a,b){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#040506'));c.fillRect(new Rect(0,0,720,338));if(a)c.drawImageInRect(a,imageRect(a,-5,KEY==='k1'?370:360,'left'));if(b)c.drawImageInRect(b,imageRect(b,KEY==='k1'?350:365,KEY==='k1'?375:360,'right'));c.setFillColor(new Color('#000000',V.heroShade));c.fillRect(new Rect(0,0,720,338));if(KEY==='k1'){c.setFillColor(new Color(S.accent,.045));c.fillRect(new Rect(0,0,720,338));}softBand(c,0,112,V.headerShade,24);softBand(c,96,232,V.mainShade,24);softBand(c,214,338,V.footShade,24);softCenter(c,S.accent,V.veil);return c.getImage();}
 function posterBg(image){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#050609'));c.fillRect(new Rect(0,0,720,338));if(image?.size){const iw=image.size.width,ih=image.size.height,scale=Math.max(720/iw,338/ih),dw=iw*scale,dh=ih*scale;c.drawImageInRect(image,new Rect((720-dw)/2,(338-dh)/2,dw,dh));}c.setFillColor(new Color('#000000',V.posterShade));c.fillRect(new Rect(0,0,720,338));if(KEY==='k1'){c.setFillColor(new Color(S.accent,.028));c.fillRect(new Rect(0,0,720,338));}softBand(c,0,112,V.headerShade,24);softBand(c,96,232,V.mainShade,24);softBand(c,214,338,V.footShade,24);softCenter(c,S.accent,V.veil);return c.getImage();}
 function gradient(){const g=new LinearGradient();g.startPoint=new Point(0,0);g.endPoint=new Point(1,1);g.colors=[new Color('#050609'),new Color(S.accent,.14)];g.locations=[0,1];return g;}
 function dateOnly(d){const f=new DateFormatter();f.locale='ja_JP';f.timeZone='Asia/Tokyo';f.dateFormat='M/d (E)';return f.string(new Date(d));}
