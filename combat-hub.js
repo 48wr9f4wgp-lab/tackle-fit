@@ -1,10 +1,10 @@
 // COMBAT HUB — GitHub Standalone / Personal
 // Scriptable 1本で UFC / RIZIN / ONE / BOXING / K-1 を表示
 // Home Screen Widget Parameter: UFC / RIZIN / ONE / BOXING / K1
-// v6.6.0-github — K-1 final visual polish / no Vercel dependency
+// v6.7.0-github — K-1 background visibility fix / no Vercel dependency
 
 (async()=>{
-const VERSION='6.6.0-github';
+const VERSION='6.7.0-github';
 const MODE_MAP={UFC:'ufc',RIZIN:'rizin',ONE:'one',BOXING:'boxing',K1:'k1'};
 const LABELS=['UFC','RIZIN','ONE','BOXING','K-1'];
 const PARAMS=['UFC','RIZIN','ONE','BOXING','K1'];
@@ -29,7 +29,7 @@ const VISUAL={
  rizin:{posterShade:.80,heroShade:.78,topShade:.04,bottomShade:.18,accentVeil:.018,heroGap:18,mainSize:11.6,divisionSize:7.2},
  one:{posterShade:.72,heroShade:.76,topShade:.04,bottomShade:.18,accentVeil:.030,heroGap:20,mainSize:11.7,divisionSize:7.3},
  boxing:{posterShade:.81,heroShade:.76,topShade:.08,bottomShade:.22,accentVeil:.022,heroGap:18,mainSize:11.9,divisionSize:7.2},
- k1:{posterShade:.93,heroShade:.84,topShade:.18,bottomShade:.30,accentVeil:.035,heroGap:17,mainSize:12.2,divisionSize:7.4}
+ k1:{posterShade:.70,heroShade:.78,topShade:.05,bottomShade:.18,accentVeil:.025,heroGap:17,mainSize:12.2,divisionSize:7.4}
 };
 const V=VISUAL[KEY];
 
@@ -73,7 +73,7 @@ async function heroContext(){
 
 function imageRect(image,x,width,side){if(!image?.size)return new Rect(x,0,width,338);const iw=image.size.width,ih=image.size.height,scale=Math.max(width/iw,338/ih),dw=iw*scale,dh=ih*scale,bias=side==='left'?.03:.97;return new Rect(x+(width-dw)*bias,(338-dh)/2-34,dw,dh);}
 function bg(a,b){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#040506'));c.fillRect(new Rect(0,0,720,338));if(a)c.drawImageInRect(a,imageRect(a,-5,360,'left'));if(b)c.drawImageInRect(b,imageRect(b,365,360,'right'));c.setFillColor(new Color('#000000',V.heroShade));c.fillRect(new Rect(0,0,720,338));c.setFillColor(new Color('#000000',V.bottomShade));c.fillRect(new Rect(0,148,720,190));c.setFillColor(new Color(S.accent,V.accentVeil));c.fillRect(new Rect(352,0,16,338));return c.getImage();}
-function posterBg(image){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#050609'));c.fillRect(new Rect(0,0,720,338));if(image?.size){const iw=image.size.width,ih=image.size.height,scale=Math.max(720/iw,338/ih),dw=iw*scale,dh=ih*scale;c.drawImageInRect(image,new Rect((720-dw)/2,(338-dh)/2,dw,dh));}c.setFillColor(new Color('#000000',V.posterShade));c.fillRect(new Rect(0,0,720,338));c.setFillColor(new Color('#000000',V.topShade));c.fillRect(new Rect(0,0,720,118));c.setFillColor(new Color('#000000',V.bottomShade));c.fillRect(new Rect(0,150,720,188));if(KEY==='k1'){c.setFillColor(new Color('#000000',.16));c.fillRect(new Rect(0,0,720,338));c.setFillColor(new Color(S.accent,.045));c.fillRect(new Rect(330,0,60,338));}c.setFillColor(new Color(S.accent,V.accentVeil));c.fillRect(new Rect(0,0,720,338));return c.getImage();}
+function posterBg(image){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#050609'));c.fillRect(new Rect(0,0,720,338));if(image?.size){const iw=image.size.width,ih=image.size.height,scale=Math.max(720/iw,338/ih),dw=iw*scale,dh=ih*scale;c.drawImageInRect(image,new Rect((720-dw)/2,(338-dh)/2,dw,dh));}c.setFillColor(new Color('#000000',V.posterShade));c.fillRect(new Rect(0,0,720,338));c.setFillColor(new Color('#000000',V.topShade));c.fillRect(new Rect(0,0,720,118));c.setFillColor(new Color('#000000',V.bottomShade));c.fillRect(new Rect(0,150,720,188));if(KEY==='k1'){c.setFillColor(new Color(S.accent,.035));c.fillRect(new Rect(330,0,60,338));}c.setFillColor(new Color(S.accent,V.accentVeil));c.fillRect(new Rect(0,0,720,338));return c.getImage();}
 function gradient(){const g=new LinearGradient();g.startPoint=new Point(0,0);g.endPoint=new Point(1,1);g.colors=[new Color('#050609'),new Color(S.accent,.14)];g.locations=[0,1];return g;}
 function dateOnly(d){const f=new DateFormatter();f.locale='ja_JP';f.timeZone='Asia/Tokyo';f.dateFormat='M/d (E)';return f.string(new Date(d));}
 function dateText(d){if(D.timeTba)return`${D.displayDate||dateOnly(d)} ・ 時刻未定`;const f=new DateFormatter();f.locale='ja_JP';f.timeZone='Asia/Tokyo';f.dateFormat="M/d (E) HH:mm 'JST'";return f.string(new Date(d));}
