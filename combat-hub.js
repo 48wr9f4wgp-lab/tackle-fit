@@ -1,10 +1,10 @@
 // COMBAT HUB — GitHub Standalone / Personal
 // Scriptable 1本で UFC / RIZIN / ONE / BOXING / K-1 を表示
 // Home Screen Widget Parameter: UFC / RIZIN / ONE / BOXING / K1
-// v7.1.0-github — safe-live rollback guard + visual corrections / no Vercel
+// v7.2.0-github — final visual cleanup / safe-live engine unchanged
 
 (async()=>{
-const VERSION='7.1.0-github';
+const VERSION='7.2.0-github';
 const MODE_MAP={UFC:'ufc',RIZIN:'rizin',ONE:'one',BOXING:'boxing',K1:'k1'};
 const LABELS=['UFC','RIZIN','ONE','BOXING','K-1'];
 const PARAMS=['UFC','RIZIN','ONE','BOXING','K1'];
@@ -24,11 +24,11 @@ const SERIES={
 const S=SERIES[KEY], C={text:'#F7F8FA',sub:'#CDD2D9',muted:'#8B929D'};
 
 const VISUAL={
-  ufc:{heroShade:.69,posterShade:.60,headerShade:.18,mainShade:.17,footShade:.25,veil:.018,gap:17,mainSize:11.7,division:7.3},
-  rizin:{heroShade:.72,posterShade:.62,headerShade:.20,mainShade:.19,footShade:.28,veil:.018,gap:17,mainSize:11.4,division:7.2},
-  one:{heroShade:.70,posterShade:.46,headerShade:.24,mainShade:.23,footShade:.27,veil:.030,gap:19,mainSize:11.7,division:7.3},
-  boxing:{heroShade:.70,posterShade:.54,headerShade:.26,mainShade:.28,footShade:.34,veil:.020,gap:18,mainSize:11.8,division:7.2},
-  k1:{heroShade:.67,posterShade:.50,headerShade:.18,mainShade:.17,footShade:.25,veil:.040,gap:17,mainSize:11.8,division:7.3}
+  ufc:{heroShade:.68,posterShade:.58,headerShade:.13,mainShade:.12,footShade:.17,veil:.018,gap:17,mainSize:11.7,division:7.3},
+  rizin:{heroShade:.70,posterShade:.60,headerShade:.14,mainShade:.13,footShade:.19,veil:.018,gap:17,mainSize:11.4,division:7.2},
+  one:{heroShade:.68,posterShade:.44,headerShade:.16,mainShade:.15,footShade:.19,veil:.028,gap:19,mainSize:11.7,division:7.3},
+  boxing:{heroShade:.68,posterShade:.52,headerShade:.18,mainShade:.18,footShade:.23,veil:.020,gap:18,mainSize:11.8,division:7.2},
+  k1:{heroShade:.57,posterShade:.46,headerShade:.11,mainShade:.12,footShade:.18,veil:.050,gap:17,mainSize:11.8,division:7.3}
 };
 const V=VISUAL[KEY];
 
@@ -43,7 +43,7 @@ const SNAPSHOT={
 const fm=FileManager.local(),DOC=fm.documentsDirectory();
 function fnt(z,w='regular'){if(w==='black'&&Font.blackSystemFont)return Font.blackSystemFont(z);if(w==='bold')return Font.boldSystemFont(z);if(w==='semibold')return Font.semiboldSystemFont(z);return Font.systemFont(z);}
 function tx(st,s,z,c,w='regular',n=1){const t=st.addText(String(s??''));t.font=fnt(z,w);t.textColor=c;t.lineLimit=n;t.minimumScaleFactor=.42;return t;}
-function divider(st){const d=st.addStack();d.size=new Size(0,1);d.backgroundColor=new Color('#FFFFFF',.075);}
+function divider(st){const d=st.addStack();d.size=new Size(0,1);d.backgroundColor=new Color('#FFFFFF',.05);}
 function decodeEntities(s){return String(s||'').replace(/&amp;/gi,'&').replace(/&nbsp;/gi,' ').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'");}
 function stripHTML(s){return decodeEntities(String(s||'').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();}
 function safeKey(s){let h=2166136261;for(const ch of String(s||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return(h>>>0).toString(16);}
@@ -73,15 +73,20 @@ const KNOWN_K1={'金子晃大':'https://www.k-1.co.jp/fighter/716','璃明武':'
 function rizinImg(html,url,name){for(const tag of html.match(/<img\b[^>]*>/gi)||[]){const alt=stripHTML(attr(tag,'alt')||'');if(alt&&(alt.includes(name)||name.includes(alt))){const src=attr(tag,'data-src')||attr(tag,'data-original')||attr(tag,'src');if(src)return absoluteURL(src,url);}}return metaImage(html,url);}
 async function profileImage(url,name,kind){if(!url)return{name,image:null};let imgURL=null,jp=name;try{const h=await reqText(url,8);imgURL=kind==='rizin'?rizinImg(h,url,name):metaImage(h,url);if(kind==='ufc'){try{const j=await reqText(url.replace('https://www.ufc.com/','https://jp.ufc.com/'),8);const m=j.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);if(m)jp=stripHTML(m[1])||jp;}catch(_){}}}catch(_){}return{name:jp,image:await cachedImage(imgURL,kind)};}
 async function heroContext(D){if(KEY==='ufc')return{a:await profileImage(KNOWN_UFC[norm(D.main.a)],D.main.a,'ufc'),b:await profileImage(KNOWN_UFC[norm(D.main.b)],D.main.b,'ufc'),poster:null};if(KEY==='rizin')return{a:await profileImage(KNOWN_RIZIN[D.main.a],D.main.a,'rizin'),b:await profileImage(KNOWN_RIZIN[D.main.b],D.main.b,'rizin'),poster:null};if(KEY==='k1'&&KNOWN_K1[D.main.a]&&KNOWN_K1[D.main.b])return{a:await profileImage(KNOWN_K1[D.main.a],D.main.a,'k1'),b:await profileImage(KNOWN_K1[D.main.b],D.main.b,'k1'),poster:null};let poster=null;try{poster=await cachedImage(D.posterURL||metaImage(await reqText(D.source,8),D.source),`${KEY}-event`);}catch(_){}return{a:{name:D.main.a,image:null},b:{name:D.main.b,image:null},poster};}
+
 function imageRect(image,x,width,side){if(!image?.size)return new Rect(x,0,width,338);const iw=image.size.width,ih=image.size.height,scale=Math.max(width/iw,338/ih),dw=iw*scale,dh=ih*scale,bias=side==='left'?.03:.97;return new Rect(x+(width-dw)*bias,(338-dh)/2-28,dw,dh);}
-function heroBg(a,b){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#040506'));c.fillRect(new Rect(0,0,720,338));if(a)c.drawImageInRect(a,imageRect(a,-5,360,'left'));if(b)c.drawImageInRect(b,imageRect(b,365,360,'right'));c.setFillColor(new Color('#000000',V.heroShade));c.fillRect(new Rect(0,0,720,338));c.setFillColor(new Color('#000000',V.headerShade));c.fillRect(new Rect(0,0,720,108));c.setFillColor(new Color('#000000',V.mainShade));c.fillRect(new Rect(0,105,720,120));c.setFillColor(new Color('#000000',V.footShade));c.fillRect(new Rect(0,224,720,114));c.setFillColor(new Color(S.accent,V.veil));c.fillRect(new Rect(350,0,20,338));return c.getImage();}
-function posterBg(image){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#050609'));c.fillRect(new Rect(0,0,720,338));if(image?.size){const iw=image.size.width,ih=image.size.height,scale=Math.max(720/iw,338/ih),dw=iw*scale,dh=ih*scale;c.drawImageInRect(image,new Rect((720-dw)/2,(338-dh)/2,dw,dh));}c.setFillColor(new Color('#000000',V.posterShade));c.fillRect(new Rect(0,0,720,338));c.setFillColor(new Color('#000000',V.headerShade));c.fillRect(new Rect(0,0,720,108));c.setFillColor(new Color('#000000',V.mainShade));c.fillRect(new Rect(0,105,720,120));c.setFillColor(new Color('#000000',V.footShade));c.fillRect(new Rect(0,224,720,114));c.setFillColor(new Color(S.accent,V.veil));c.fillRect(new Rect(0,0,720,338));return c.getImage();}
+function softBand(c,y0,y1,alpha,feather=22){const h=Math.max(1,y1-y0),f=Math.min(feather,Math.floor(h/2)),step=4;if(h>2*f){c.setFillColor(new Color('#000000',alpha));c.fillRect(new Rect(0,y0+f,720,h-2*f));}for(let y=0;y<f;y+=step){const p=Math.min(1,(y+step/2)/f),hh=Math.min(step,f-y);c.setFillColor(new Color('#000000',alpha*p));c.fillRect(new Rect(0,y0+y,720,hh));c.setFillColor(new Color('#000000',alpha*(1-p)));c.fillRect(new Rect(0,y1-f+y,720,hh));}}
+function softCenter(c,color,alpha){const bands=[84,60,40,24,10];for(let i=0;i<bands.length;i++){const w=bands[i],a=alpha*((i+1)/bands.length)*.34;c.setFillColor(new Color(color,a));c.fillRect(new Rect(360-w/2,0,w,338));}}
+function heroBg(a,b){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#040506'));c.fillRect(new Rect(0,0,720,338));if(a)c.drawImageInRect(a,imageRect(a,-5,360,'left'));if(b)c.drawImageInRect(b,imageRect(b,365,360,'right'));c.setFillColor(new Color('#000000',V.heroShade));c.fillRect(new Rect(0,0,720,338));if(KEY==='k1'){c.setFillColor(new Color(S.accent,.035));c.fillRect(new Rect(0,0,720,338));}softBand(c,0,112,V.headerShade,24);softBand(c,96,232,V.mainShade,24);softBand(c,214,338,V.footShade,24);softCenter(c,S.accent,V.veil);return c.getImage();}
+function posterBg(image){const c=new DrawContext();c.size=new Size(720,338);c.opaque=true;c.respectScreenScale=false;c.setFillColor(new Color('#050609'));c.fillRect(new Rect(0,0,720,338));if(image?.size){const iw=image.size.width,ih=image.size.height,scale=Math.max(720/iw,338/ih),dw=iw*scale,dh=ih*scale;c.drawImageInRect(image,new Rect((720-dw)/2,(338-dh)/2,dw,dh));}c.setFillColor(new Color('#000000',V.posterShade));c.fillRect(new Rect(0,0,720,338));if(KEY==='k1'){c.setFillColor(new Color(S.accent,.028));c.fillRect(new Rect(0,0,720,338));}softBand(c,0,112,V.headerShade,24);softBand(c,96,232,V.mainShade,24);softBand(c,214,338,V.footShade,24);softCenter(c,S.accent,V.veil);return c.getImage();}
 function gradient(){const g=new LinearGradient();g.startPoint=new Point(0,0);g.endPoint=new Point(1,1);g.colors=[new Color('#050609'),new Color(S.accent,.14)];g.locations=[0,1];return g;}
 function dateOnly(d){const f=new DateFormatter();f.locale='ja_JP';f.timeZone='Asia/Tokyo';f.dateFormat='M/d (E)';return f.string(new Date(d));}
 function dateText(D){if(D.timeTba)return`${D.displayDate||dateOnly(D.startAt)} ・ 時刻未定`;const f=new DateFormatter();f.locale='ja_JP';f.timeZone='Asia/Tokyo';f.dateFormat="M/d (E) HH:mm 'JST'";return f.string(new Date(D.startAt));}
 function countdown(D){if(D.timeTba)return'時刻未定';const q=new Date(D.startAt)-Date.now();if(q<=0)return D.nextPending?'確認中':'開催中';const m=Math.floor(q/60000),days=Math.floor(m/1440),h=Math.floor((m%1440)/60),mm=m%60;if(days>0)return`${days}日 ${h}時間`;if(h>0)return`${h}時間 ${mm}分`;return`${mm}分`;}
 function division(s){const v=String(s||'');if(/FEATHER|フェザー/i.test(v))return/タイトル|TITLE/i.test(v)?'フェザー級タイトル戦':'フェザー級';if(/BANTAM|バンタム/i.test(v))return/スーパー|SUPER/i.test(v)?'スーパー・バンタム級':'バンタム級';if(/STRAW|ストロー/i.test(v))return'ストロー級';if(/WELTER|ウェルター/i.test(v))return'ウェルター級';if(/LIGHT|ライト/i.test(v))return'ライト級';return v.length>25?v.slice(0,24)+'…':v;}
-function supportRow(w,row){const s=w.addStack();s.centerAlignContent();const l=s.addStack();l.size=new Size(65,0);tx(l,row.label,7.1,new Color(S.accent),'bold');s.addSpacer(4);const a=s.addStack();a.size=new Size(116,0);tx(a,row.a,9.0,new Color(C.text),'semibold');s.addSpacer(4);tx(s,'VS',7.1,new Color(S.accent),'bold');s.addSpacer(4);const b=s.addStack();b.size=new Size(116,0);const bt=tx(b,row.b,9.0,new Color(C.text),'semibold');bt.rightAlignText();}
+function supportFont(s){const n=[...String(s||'')].length;return n>13?8.25:n>10?8.6:9.0;}
+function supportRow(w,row){const s=w.addStack();s.centerAlignContent();const l=s.addStack();l.size=new Size(65,0);tx(l,row.label,7.1,new Color(S.accent),'bold');s.addSpacer(4);const a=s.addStack();a.size=new Size(116,0);tx(a,row.a,supportFont(row.a),new Color(C.text),'semibold');s.addSpacer(4);tx(s,'VS',7.1,new Color(S.accent),'bold');s.addSpacer(4);const b=s.addStack();b.size=new Size(116,0);const bt=tx(b,row.b,supportFont(row.b),new Color(C.text),'semibold');bt.rightAlignText();}
+
 const D=await loadData(),ctx=await heroContext(D),w=new ListWidget();w.setPadding(10,14,8,14);
 if(ctx.poster)w.backgroundImage=posterBg(ctx.poster);else if(ctx.a.image||ctx.b.image)w.backgroundImage=heroBg(ctx.a.image,ctx.b.image);else w.backgroundGradient=gradient();
 const h=w.addStack();h.centerAlignContent();const hl=h.addStack();hl.layoutVertically();tx(hl,S.label,20,new Color(C.text),'black');hl.addSpacer(2);const meta=hl.addStack();tx(meta,dateText(D),8.1,new Color(C.sub),'semibold');meta.addSpacer(5);tx(meta,'·',7,new Color(C.muted));meta.addSpacer(5);tx(meta,shortLoc(D.location),8.1,new Color(C.sub),'semibold');h.addSpacer();const hr=h.addStack();hr.layoutVertically();const lab=hr.addStack();lab.addSpacer();tx(lab,D.timeTba?'開催':'開催まで',6.2,new Color(C.muted),'bold');hr.addSpacer(1);const cd=hr.addStack();cd.addSpacer();tx(cd,countdown(D),12.8,new Color(C.text),'black');
